@@ -48,7 +48,7 @@ def get_logger():
     :returns: the logger.
     """
     # logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    logger = logging.getLogger('NE1') # tobi changed so all have same name so we can uniformly affect all of them
+    logger = logging.getLogger('saveloadvars') # tobi changed so all have same name so we can uniformly affect all of them
     logger.setLevel(_LOGGING_LEVEL)
     # create console handler if this logger does not have handler yet
     if len(logger.handlers)==0:
@@ -247,10 +247,10 @@ def _yes_or_no_or_always(question, default='y', timeout=None):
     while "the answer is invalid":
         try:
             to_str='' if timeout is None or os.name=='nt' else f'(Timeout {default} in {timeout}s)'
-            if os.name=='nt':
+            if not timeout is None and os.name=='nt':
                 log.warning('cannot use timeout signal on windows')
                 time.sleep(.1) # make the warning come out first
-                reply=str(input(f'{question} {to_str} ({yes}/{no}): ')).lower().strip()
+                reply=str(input(f'{question} {to_str} ({yes}/{no}/{always}): ')).lower().strip()
             else:
                 reply = str(_input_with_timeout(f'{question} {to_str} ({yes}/{no}/{always}): ', timeout=timeout)).lower().strip()
         except TimeoutError:

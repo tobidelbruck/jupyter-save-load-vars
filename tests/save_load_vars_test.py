@@ -8,7 +8,7 @@ savevars('testvars')
 del b,c
 loadvars('testvars',overwrite='no')
 loadvars('testvars',overwrite='yes')
-del a,b
+del a
 loadvars('testvars',overwrite='prompt')
 
 print(a)
