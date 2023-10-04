@@ -1,13 +1,13 @@
 # saveloadvars
-Saves and loads variables, typically to and from an IPython/Jupyter workspace.
+Saves and loads variables, typically to and from an [IPython/Jupyter](https://stackoverflow.com/questions/51700425/what-is-the-relation-and-difference-between-ipython-and-jupyter-console) workspace.
 
-[dill](https://pypi.org/project/dill/) is often used for [saving and loading from python notebooks](https://stackoverflow.com/questions/34342155/how-to-pickle-or-store-jupyter-ipython-notebook-session-for-later) but it fails for objects that cannot be pickled, e.g. hardware objects or generators. 
+[dill](https://pypi.org/project/dill/) is often used for [saving and loading from python notebooks](https://stackoverflow.com/questions/34342155/how-to-pickle-or-store-jupyter-ipython-notebook-session-for-later) but it fails for objects that cannot be pickled, e.g. hardware objects or generators. It also requires users to wrap the `dill.dump()` in a with open(file): call and does not handle restoring the variables to the workspace from the returned data from `dill.load()`. _saveloadvars_ is an attempt to make this process as simple as possible.
 
-* _savevars(file)_ finds all local variables, excludes In and Out and any variable that starts with '_' and just skips objects that cannot be picked.
+* `savevars(filename)` finds all local variables, excludes In and Out and any variable that starts with '_' and just skips objects that cannot be picked.
 
-* _loadvars(filename, overwrite='prompt')_ loads the variables back into the workspace. _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite),or 'no' to not overwrite existing variables.
+* `loadvars(filename, overwrite='prompt')` loads the variables back into the workspace. _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing variables.
 
-The file name has .dill added if no suffix is provided.
+The file name has _.dill_ added if no suffix is provided.
 
 
 ## Usage:
@@ -18,12 +18,12 @@ b=[2,3]
 c='string'
 o=(i for i in []) # make generator that cannot be pickled
 print([a,b,c,o])
-savevars('testvars')
+savevars('testvars') # saves data to savevars.dill
 del b,c
-loadvars('testvars',overwrite='no')
-loadvars('testvars',overwrite='yes')
+loadvars('testvars',overwrite='no') # loads data back but over overwriting existing variable a
+loadvars('testvars',overwrite='yes') # now we overwrite a
 del a
-loadvars('testvars',overwrite='prompt')
+loadvars('testvars',overwrite='prompt') # now try the prompt (Yes/no/always)
 
 print(a)
 print(b)
