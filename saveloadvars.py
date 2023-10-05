@@ -8,7 +8,7 @@ import logging
 # to use it, just call log=get_logger() at the top of your python file
 # all these loggers share the same logger name 'NE1'
 
-_LOGGING_LEVEL = logging.DEBUG # usually INFO is good
+_LOGGING_LEVEL = logging.INFO # usually INFO is good, DEBUG for debugging
 
 class CustomFormatter(logging.Formatter):
     """Logging Formatter to add colors and count warning / errors"""
@@ -80,6 +80,7 @@ def printvars():
     print('')
 
 _DILL='.dill'
+_RAN_SAVELOADVARS_TODAY_FILENAME='saveloadvars-ran.txt'
 
 def savevars(filename):
     """
@@ -110,7 +111,7 @@ def savevars(filename):
     from types import ModuleType
     s=f'saved to {p} variables [ '
     for k,v in locals.items():
-        # don't try to pickle any pyplane objects
+        # don't try to pickle any objects that we don't want from notebook and anything that doesn't pickle
         if k.startswith('_') or (isinstance(v,str) and (k=='tmp' or k=='In' or k=='Out')) or hasattr(v, '__call__') \
             or isinstance(v,ModuleType) or isinstance(v,logging.Logger): 
             continue
@@ -128,7 +129,7 @@ def savevars(filename):
        with open(p,'wb') as f:
             try:
                 dill.dump(data,f)
-                log.info(f'{s}')
+                log.info(f'{s}') # show what we saved
                 if len(could_not_pickle)>0:
                     log.warning(f'could not pickle: {could_not_pickle}')
             except TypeError as e:
@@ -136,12 +137,13 @@ def savevars(filename):
     except Exception as e:
         log.error(f'could not save data to {p}')
 
-def loadvars(filename, overwrite='prompt'):
+def loadvars(filename, overwrite='prompt', warn=True):
     """ Loads variables from file into the current workspace
     This function loads the variables found in filename into the parent workspace.
     
     :param filename: the dill file to load from, e.g. lab1. The suffix .dill is added automatically unless there is already a suffix.
-    :param overwrite: 'prompt' (default) asks to overwrite, 'no' does not overwrite, 'yes' overwrites silently
+    :param overwrite: 'prompt' (default) asks to overwrite, 'no' does not overwrite, 'yes' overwrites silently.
+    :param warn: True, warn the user one a day about dangers of unpickling any file, False, don't warn
 
     :raises: Exception if it cannot load for any reason except not being able to overwrite particular variables.
     """
@@ -149,56 +151,81 @@ def loadvars(filename, overwrite='prompt'):
         raise ValueError(f'overwrite={overwrite} is invalid, must be "yes" "no" or "prompt"')
     import dill
     from pathlib import Path
-    p=Path(filename)
-    if p.suffix=='': # if suffix is missing add .dill
-        p = p.parent / (p.name + _DILL)
-    if not p.exists:
-        raise FileNotFoundError(f'{p} does not exist')
+    dill_file_path=Path(filename)
+    if dill_file_path.suffix=='': # if suffix is missing add .dill
+        dill_file_path = dill_file_path.parent / (dill_file_path.name + _DILL)
+    if not dill_file_path.exists:
+        raise FileNotFoundError(f'{dill_file_path} does not exist')
+    if warn:
+        try:
+            import tempfile, os, pathlib, time
+            ran_today_path=Path(os.path.join(tempfile.tempdir,_RAN_SAVELOADVARS_TODAY_FILENAME))
+            if ran_today_path.exists():
+                seconds_since_last_ran= time.time()-os.path.getmtime(ran_today_path)
+                log.debug(f'seconds since saveloadvars last ran: {seconds_since_last_ran}')
+                if seconds_since_last_ran>24*60*60:
+                    confirm=_yes_or_no_or_always(f'Unpickling file {dill_file_path} can be used maliciously to execute arbitrary code. Do you trust it (warning shown once per 24h)? ', default='n')
+                    if not confirm=='yes':
+                        log.info('cancelled')
+                        return
+            else:
+                confirm = _yes_or_no_or_always(
+                   f'Unpickling  {dill_file_path} can be used maliciously to execute arbitrary code. Do you trust it (warning shown once per 24h)? ',
+                    default='n')
+                if not confirm=='yes':
+                    log.info('cancelled')
+                    return
+            ran_today_path.touch(exist_ok=True)
+            log.debug(f'touched {ran_today_path}')
+        except Exception as e:
+            log.warning(f'could not warning user about unpickling: {e}')
     did_not_overwrite=[]
     overwrote=[]
-    try:
-        with open(p,'rb') as f:
+    with open(dill_file_path,'rb') as f:
+        try:
             data=dill.load(f)
-            log.info(f'from {p} loaded variables {list(data.keys())}')
-            import inspect
-            try:
-                frame = inspect.currentframe().f_back # get the workspace frame (jupyter workspace frame)
-                locals = frame.f_locals # get its local variable dict
-                always=False
-                for k in data:
-                    try:
-                        if k in locals.keys(): # if variable exists
-                            if overwrite=='yes' or always:
-                                # if always overwrite (yes) or prompt returns True
+        except Exception as e:
+            log.error(f'could load load dill: got {e}')
+            raise(e)
+        log.info(f'from {dill_file_path} loaded variables {list(data.keys())}')
+        import inspect
+        try:
+            frame = inspect.currentframe().f_back # get the workspace frame (jupyter workspace frame)
+            locals = frame.f_locals # get its local variable dict
+            always=False
+            for k in data:
+                try:
+                    if k in locals.keys(): # if variable exists
+                        if overwrite=='yes' or always:
+                            # if always overwrite (yes) or prompt returns True
+                            locals[k] = data[k] # set a value in it
+                            overwrote.append(k)
+                        elif overwrite=='prompt':
+                            resp=_yes_or_no_or_always(f'Overwrite existing variable "{k}" ?')
+                            if resp=='always':
+                                always=True
                                 locals[k] = data[k] # set a value in it
                                 overwrote.append(k)
-                            elif overwrite=='prompt':
-                                resp=_yes_or_no_or_always(f'Overwrite existing variable "{k}" ?')
-                                if resp=='always':
-                                    always=True
-                                    locals[k] = data[k] # set a value in it
-                                    overwrote.append(k)
-                                elif resp=='yes':
-                                    locals[k] = data[k] # set a value in it
-                                    overwrote.append(k)
-                                else:
-                                    did_not_overwrite.append(k)
+                            elif resp=='yes':
+                                locals[k] = data[k] # set a value in it
+                                overwrote.append(k)
                             else:
                                 did_not_overwrite.append(k)
                         else:
-                            locals[k] = data[k] # set a value in it
-                    except Exception as e:
-                        log.error(f'could not set variable {k}: got {e}')
-            finally:
-                del frame
-            # didnt_overwrite_str=' '.join(did_not_overwrite)
-            if len(overwrote)>0:
-                log.info(f'overwrote existing variables {overwrote}')
-            if len(did_not_overwrite)>0:
-                log.info(f'did not overwrite existing variables {did_not_overwrite}')
-            
-    except Exception as e:
-        raise Exception(f'could not load; got {e}')
+                            did_not_overwrite.append(k)
+                    else:
+                        locals[k] = data[k] # set a value in it
+                except Exception as e:
+                    log.error(f'could not set variable {k}: got {e}')
+        finally:
+            del frame
+        # didnt_overwrite_str=' '.join(did_not_overwrite)
+        if len(overwrote)>0:
+            log.info(f'overwrote existing variables {overwrote}')
+        if len(did_not_overwrite)>0:
+            log.info(f'did not overwrite existing variables {did_not_overwrite}')
+
+
 
 # useful utilies to ask question at console terminal with default answer and timeout
 

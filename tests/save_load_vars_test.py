@@ -3,14 +3,23 @@ a=1
 b=[2,3]
 c='string'
 o=(i for i in []) # make generator that cannot be pickled
-print([a,b,c,o])
-savevars('testvars')
-del b,c
-loadvars('testvars',overwrite='no')
-loadvars('testvars',overwrite='yes')
-del a
-loadvars('testvars',overwrite='prompt')
+# define a class
+class MyClass:
+    name = ""
+    l=[1,2,3]
+cl = MyClass() # create object with this class
 
-print(a)
-print(b)
-print(c)
+print([a,b,c,o,cl])
+print('saving variables')
+savevars('testvars')
+print('deleting b,c')
+del b,c
+print('loading variables with prompt (default)')
+loadvars('testvars') # load with prompt for overwriting existing a variable
+# loadvars(filename,warn=False) # suppresses warning about unsafe unpickling
+print('loading variables with no overwrite')
+loadvars('testvars',overwrite='no')
+print('loading variables with overwrite')
+loadvars('testvars',overwrite='yes')
+print([a,b,c,cl])
+

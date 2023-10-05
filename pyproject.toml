@@ -1,10 +1,11 @@
+# https://setuptools.pypa.io/en/latest/userguide/quickstart.html#uploading-your-package-to-pypi
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "saveloadvars"
-version = "0.1.0"
+version = "0.1.2"
 authors = [
   { name="Tobi Delbruck", email="tobidelbruck@gmail.com" },
 ]
@@ -19,6 +20,9 @@ classifiers = [
 dependencies = [
     "dill>=0.3.7",
 ]
+[project.optional-dependencies]
+dev = ["flake8", "pytest"]
+
 [project.urls]
 "Homepage" = "https://github.com/tobidelbruck/saveloadvars"
 "Bug Tracker" = "https://github.com/tobidelbruck/saveloadvars/issues"
