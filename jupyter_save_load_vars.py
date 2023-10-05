@@ -65,16 +65,17 @@ import inspect
 def printvars():
     """ prints local variables, similar to %who in ipython jupyter notebook"""
     from types import ModuleType
-    tmp=None
+    locals=None
     frame = inspect.currentframe().f_back
     try:
-        tmp = frame.f_locals
+        locals = frame.f_locals
     finally:
         del frame
-    if tmp is None: return
+    if locals is None: return
     print('variables: ',end='')
-    for k,v in tmp.items():
-        if k.startswith('_') or k=='tmp' or k=='In' or k=='Out' or hasattr(v, '__call__') or isinstance(v,ModuleType) or isinstance(v,logging.Logger):
+    for k,v in locals.items():
+        if k.startswith('_') or (isinstance(v,str) and (k=='tmp' or k=='In' or k=='Out')) or hasattr(v, '__call__') \
+            or isinstance(v,ModuleType) or isinstance(v,logging.Logger):
             continue
         print(k, end=',')
     print('')
@@ -82,19 +83,27 @@ def printvars():
 _DILL='.dill'
 _RAN_SAVELOADVARS_TODAY_FILENAME='saveloadvars-ran.txt'
 
-def savevars(filename):
+def savevars(filename, overwrite='prompt'):
     """
     saves all local variables to a file with dill
     
     :param filename: the name of the file. The suffix .dill is added if there is not a suffix already.
+    :param overwrite: 'prompt' (default) prompts for overwrite of existing file, 'yes' overwrites, 'no' does not overwrite
+
     """
     if filename is None:
         log.error('you must supply a filename')
         return
     from pathlib import Path
-    p=Path(filename)
-    if p.suffix=='': # if suffix is missing add .dill
-        p = p.parent / (p.name + _DILL)
+    dill_file_path=Path(filename)
+    if dill_file_path.suffix=='': # if suffix is missing add .dill
+        dill_file_path = dill_file_path.parent / (dill_file_path.name + _DILL)
+    if not overwrite in ('yes', 'no', 'prompt'):
+        raise ValueError(f"argument 'overwrite' must be one of ('yes', 'no', 'prompt')")
+    if dill_file_path.exists():
+        if overwrite=='no' or (overwrite=='prompt' and _yes_or_no_or_always(f'file {dill_file_path} already exists, overwrite it?',default='y')=='n'):
+            log.info('cancelled')
+            return
 
     import inspect,dill
     locals=None
@@ -109,7 +118,7 @@ def savevars(filename):
     could_not_pickle=[]
 
     from types import ModuleType
-    s=f'saved to {p} variables [ '
+    s=f'saved to {dill_file_path} variables [ '
     for k,v in locals.items():
         # don't try to pickle any objects that we don't want from notebook and anything that doesn't pickle
         if k.startswith('_') or (isinstance(v,str) and (k=='tmp' or k=='In' or k=='Out')) or hasattr(v, '__call__') \
@@ -126,7 +135,7 @@ def savevars(filename):
         data[k]=v
     s=s+']'
     try:
-       with open(p,'wb') as f:
+       with open(dill_file_path,'wb') as f:
             try:
                 dill.dump(data,f)
                 log.info(f'{s}') # show what we saved
@@ -135,7 +144,7 @@ def savevars(filename):
             except TypeError as e:
                 log.error(f'\n Error: {e}')
     except Exception as e:
-        log.error(f'could not save data to {p}')
+        log.error(f'could not save data to {dill_file_path}')
 
 def loadvars(filename, overwrite='prompt', warn=True):
     """ Loads variables from file into the current workspace
@@ -276,9 +285,9 @@ def _yes_or_no_or_always(question, default='y', timeout=None):
             if not timeout is None and os.name=='nt':
                 log.warning('cannot use timeout signal on windows')
                 time.sleep(.1) # make the warning come out first
-                reply=str(input(f'{question} {to_str} ({yes}/{no}/{always}): ')).lower().strip()
+                reply=str(input(f'{question} {to_str} [{yes}/{no}/{always}]: ')).lower().strip()
             else:
-                reply = str(_input_with_timeout(f'{question} {to_str} ({yes}/{no}/{always}): ', timeout=timeout)).lower().strip()
+                reply = str(_input_with_timeout(f'{question} {to_str} [{yes}/{no}/{always}]: ', timeout=timeout)).lower().strip()
         except TimeoutError:
             log.warning(f'timeout expired, returning default={default} answer')
             reply=''

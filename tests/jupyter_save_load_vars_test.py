@@ -1,4 +1,4 @@
-from saveloadvars import savevars,loadvars
+from jupyter_save_load_vars import savevars,loadvars,printvars
 a=1
 b=[2,3]
 c='string'
@@ -9,7 +9,12 @@ class MyClass:
     l=[1,2,3]
 cl = MyClass() # create object with this class
 
-print([a,b,c,o,cl])
+import functools, sys
+print = functools.partial(print, flush=True, file=sys.stderr) # flush and put print() on stderr so logging comes in sequence
+
+import time
+printvars()
+time.sleep(3)
 print('saving variables')
 savevars('testvars')
 print('deleting b,c')
