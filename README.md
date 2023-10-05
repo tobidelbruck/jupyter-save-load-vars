@@ -1,5 +1,5 @@
 # jupyter-save-load-vars
-Saves and loads variables, typically to and from an [IPython/Jupyter](https://stackoverflow.com/questions/51700425/what-is-the-relation-and-difference-between-ipython-and-jupyter-console) workspace.
+Saves and loads variables, typically to and from an [IPython/Jupyter](https://stackoverflow.com/questions/51700425/what-is-the-relation-and-difference-between-ipython-and-jupyter-console) notebook workspace.
 
 [dill](https://pypi.org/project/dill/) is often used for [saving and loading from python notebooks](https://stackoverflow.com/questions/34342155/how-to-pickle-or-store-jupyter-ipython-notebook-session-for-later) but it fails for objects that cannot be pickled, e.g. hardware objects or generators. It also requires users to wrap the `dill.dump()` in a with open(file): call and does not handle restoring the variables to the workspace from the returned data from `dill.load()`. _** jupyter-save-load-vars**_ is an attempt to make this process as simple as possible.
 
@@ -7,7 +7,7 @@ Saves and loads variables, typically to and from an [IPython/Jupyter](https://st
 
 * `savevars(filename, overwrite='prompt')` finds all local variables, excludes In and Out and any variable that starts with '_' and just skips objects that cannot be picked. _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing data file.
 
-* `loadvars(filename, overwrite='prompt')` loads the variables back into the workspace. _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing variables.
+* `loadvars(filename, overwrite='prompt', warn=True)` loads the variables back into the workspace. _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing variables. It warns about dangers of loading data from pickles once a day unless _warn=False_ is set.
 
 The file name has _.dill_ appended if no suffix is provided.
 
