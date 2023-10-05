@@ -1,4 +1,4 @@
-# saveloadvars
+# jupyter-saveloadvars
 Saves and loads variables, typically to and from an [IPython/Jupyter](https://stackoverflow.com/questions/51700425/what-is-the-relation-and-difference-between-ipython-and-jupyter-console) workspace.
 
 [dill](https://pypi.org/project/dill/) is often used for [saving and loading from python notebooks](https://stackoverflow.com/questions/34342155/how-to-pickle-or-store-jupyter-ipython-notebook-session-for-later) but it fails for objects that cannot be pickled, e.g. hardware objects or generators. It also requires users to wrap the `dill.dump()` in a with open(file): call and does not handle restoring the variables to the workspace from the returned data from `dill.load()`. _**saveloadvars**_ is an attempt to make this process as simple as possible.
@@ -9,9 +9,9 @@ Saves and loads variables, typically to and from an [IPython/Jupyter](https://st
 
 The file name has _.dill_ appended if no suffix is provided.
 
-saveloadvars is available from pypi and can be installed with
+saveloadvars is available from [pypi](https://pypi.org/) and can be installed with
 ```bash
-pip install saveloadvars
+pip install jupyter-saveloadvars
 ```
 
 ### Warning
@@ -19,7 +19,7 @@ Liike any unpickling operation, users should not `loadvars` from any file whose 
 
 ## Usage:
 ```python
-from saveloadvars import savevars,loadvars
+from saveloadvars import savevars,loadvars # import the functions
 a=1
 b=[2,3]
 c='string'
