@@ -164,13 +164,13 @@ def loadvars(filename, overwrite='prompt', warn=True):
                 seconds_since_last_ran= time.time()-os.path.getmtime(ran_today_path)
                 log.debug(f'seconds since saveloadvars last ran: {seconds_since_last_ran}')
                 if seconds_since_last_ran>24*60*60:
-                    confirm=_yes_or_no_or_always(f'Unpickling file {dill_file_path} can be used maliciously to execute arbitrary code. Do you trust it (warning shown once per 24h)? ', default='n')
+                    confirm=_yes_or_no_or_always(f'Unpickling file "{dill_file_path}" can be used maliciously to execute arbitrary code.\n Do you trust it (warning shown once per 24h)? ', default='n')
                     if not confirm=='yes':
                         log.info('cancelled')
                         return
             else:
                 confirm = _yes_or_no_or_always(
-                   f'Unpickling  {dill_file_path} can be used maliciously to execute arbitrary code. Do you trust it (warning shown once per 24h)? ',
+                   f'Unpickling file "{dill_file_path}" can be used maliciously to execute arbitrary code.\n Do you trust it (warning shown once per 24h)? ',
                     default='n')
                 if not confirm=='yes':
                     log.info('cancelled')
