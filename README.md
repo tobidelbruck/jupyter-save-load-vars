@@ -5,9 +5,13 @@ Saves and loads variables, typically to and from an [IPython/Jupyter](https://st
 
 **jupyter-save-load-vars** supplies two functions, via `from jupyter_save_load_vars import savevars, loadvars`
 
-* `savevars(filename, overwrite='prompt')` finds all local variables, excludes In and Out and any variable that starts with '_' and just skips objects that cannot be picked. _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing data file.
+* `savevars(filename, vars=None, overwrite='prompt')` finds all local variables, excludes In and Out and any variable that starts with '_' and just skips objects that cannot be picked. 
+  * _vars_ is an optional list of strings, e.g. ['a','b'] that are saved. By default all variables are saved.
+  * _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing data file.
 
-* `loadvars(filename, overwrite='prompt', warn=True)` loads the variables back into the workspace. _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing variables. _warn=True_ warns about dangers of loading data from pickles once a day; set _warn=False_ to suppress this warning.
+* `loadvars(filename, overwrite='prompt', warn=True)` loads the variables back into the workspace. 
+  * _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing variables.
+  * _warn=True_ warns about dangers of loading data from pickles once a day; set _warn=False_ to suppress this warning.
 
 The file name has _.dill_ appended if no suffix is provided.
 
