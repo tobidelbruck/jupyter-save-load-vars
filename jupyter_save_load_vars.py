@@ -62,20 +62,36 @@ log=get_logger()
 # https://stackoverflow.com/questions/6618795/get-locals-from-calling-namespace-in-python
 import inspect
 
+
+def _is_var(k, v):
+    """ Central function to determine if a variable is of type that should be saved
+
+    :param k: the key (name)
+    :param v: its value
+    :return: True if variable, False if not
+    """
+    from types import ModuleType
+    isvar = k.startswith('_') or (isinstance(k, str) and (k == 'tmp' or k == 'In' or k == 'Out')) or hasattr(v,
+                                                                                                             '__call__') \
+            or isinstance(v, ModuleType) or isinstance(v, logging.Logger)
+    return isvar
+
+
 def printvars():
     """ prints local variables, similar to %who in ipython jupyter notebook"""
-    from types import ModuleType
+
     locals=None
     frame = inspect.currentframe().f_back
     try:
         locals = frame.f_locals
     finally:
         del frame
-    if locals is None: return
-    print('variables: ',end='')
+    if locals is None:
+        print('No variables found in this workspace')
+        return
+    print('Non-Jupyter-notebook variables in this workspace: ',end='')
     for k,v in locals.items():
-        if k.startswith('_') or (isinstance(v,str) and (k=='tmp' or k=='In' or k=='Out')) or hasattr(v, '__call__') \
-            or isinstance(v,ModuleType) or isinstance(v,logging.Logger):
+        if _is_var(k,v):
             continue
         print(k, end=',')
     print('')
@@ -83,12 +99,15 @@ def printvars():
 _DILL='.dill'
 _RAN_SAVELOADVARS_TODAY_FILENAME='saveloadvars-ran.txt'
 
-def savevars(filename, overwrite='prompt'):
+
+
+def savevars(filename, vars=None, overwrite='prompt'):
     """
     saves all local variables to a file with dill
     
     :param filename: the name of the file. The suffix .dill is added if there is not a suffix already.
-    :param overwrite: 'prompt' (default) prompts for overwrite of existing file, 'yes' overwrites, 'no' does not overwrite
+    :param vars: a list of string names of variables to save. If None (default), all local variables are saved.
+    :param overwrite: 'prompt' (default) prompts for overwrite of existing file, 'yes' overwrites, 'no' does not overwrite.
 
     """
     if filename is None:
@@ -101,7 +120,7 @@ def savevars(filename, overwrite='prompt'):
     if not overwrite in ('yes', 'no', 'prompt'):
         raise ValueError(f"argument 'overwrite' must be one of ('yes', 'no', 'prompt')")
     if dill_file_path.exists():
-        if overwrite=='no' or (overwrite=='prompt' and _yes_or_no_or_always(f'file {dill_file_path} already exists, overwrite it?',default='y')=='n'):
+        if overwrite=='no' or (overwrite=='prompt' and _yes_or_no_or_always(f'file {dill_file_path} already exists, overwrite it?',default='y',always_option=False)=='n'):
             log.info('cancelled')
             return
 
@@ -112,7 +131,27 @@ def savevars(filename, overwrite='prompt'):
         locals = frame.f_locals
     finally:
         del frame
-    if locals is None: return
+    if locals is None:
+        log.warning('found zero variables to save')
+        return
+    if not vars is None:
+        if not type(vars) is list:
+            raise ValueError('vars argument must be a list of strings, e.g. ["a","b"], not {vars}')
+
+        def is_list_of_strings(lst):
+            return bool(lst) and not isinstance(lst, str) and all(isinstance(elem, str) for elem in lst)
+        if not is_list_of_strings(vars):
+            raise ValueError('vars argument must be a list of strings')
+
+        # vars is a list of string names of vars
+        vars_to_save=dict() # a temp dict to save the ones we really want to save
+        for v in vars:
+            if not v in locals.keys():
+                raise ValueError(f"'{v}' is not a local variable")
+            else:
+                vars_to_save[v]=locals[v]
+        locals=vars_to_save
+
 
     data={}
     could_not_pickle=[]
@@ -121,8 +160,7 @@ def savevars(filename, overwrite='prompt'):
     s=f'saved to {dill_file_path} variables [ '
     for k,v in locals.items():
         # don't try to pickle any objects that we don't want from notebook and anything that doesn't pickle
-        if k.startswith('_') or (isinstance(v,str) and (k=='tmp' or k=='In' or k=='Out')) or hasattr(v, '__call__') \
-            or isinstance(v,ModuleType) or isinstance(v,logging.Logger): 
+        if _is_var(k,v):
             continue
         try:
             if not dill.pickles(v):
@@ -174,12 +212,12 @@ def loadvars(filename, overwrite='prompt', warn=True):
                 seconds_since_last_ran= time.time()-os.path.getmtime(ran_today_path)
                 log.debug(f'seconds since saveloadvars last ran: {seconds_since_last_ran}')
                 if seconds_since_last_ran>24*60*60:
-                    confirm=_yes_or_no_or_always(warning_msg, default='n')
+                    confirm=_yes_or_no_or_always(warning_msg, default='n',always_option=False)
                     if not confirm=='yes':
                         log.info('cancelled')
                         return
             else:
-                confirm = _yes_or_no_or_always(warning_msg, default='n')
+                confirm = _yes_or_no_or_always(warning_msg, default='n',always_option=False)
                 if not confirm=='yes':
                     log.info('cancelled')
                     return
@@ -265,12 +303,13 @@ def _input_with_timeout(prompt, timeout=30):
             signal.alarm(0) # cancel alarm
 
 import os
-def _yes_or_no_or_always(question, default='y', timeout=None):
+def _yes_or_no_or_always(question, default='y', timeout=None, always_option=True):
     """ Get Yes/No/Always answer with default choice and optional timeout
 
     :param question: prompt
     :param default: the default choice, i.e. 'y' or 'n' or 'a'
-    :param timeout: the timeout in seconds, default is None
+    :param timeout: the timeout in seconds, default is None. Does not work on windows.
+    :param always_option: True to include, False to go to yes/no
 
     :returns: 'yes' or 'no' or 'always'
     """
@@ -279,15 +318,20 @@ def _yes_or_no_or_always(question, default='y', timeout=None):
     yes='Yes' if default=='y' else 'yes'
     no='No' if default=='n' else 'no'
     always='always'
+    to_str='' if timeout is None or os.name=='nt' else f'(Timeout {default} in {timeout}s)'
+    if always_option:
+        quest_str=f'{question} {to_str} [{yes}/{no}/{always}]: '
+    else:
+        quest_str=f'{question} {to_str} [{yes}/{no}]: '
+
     while "the answer is invalid":
         try:
-            to_str='' if timeout is None or os.name=='nt' else f'(Timeout {default} in {timeout}s)'
             if not timeout is None and os.name=='nt':
                 log.warning('cannot use timeout signal on windows')
                 time.sleep(.1) # make the warning come out first
-                reply=str(input(f'{question} {to_str} [{yes}/{no}/{always}]: ')).lower().strip()
+                reply=str(input(quest_str)).lower().strip()
             else:
-                reply = str(_input_with_timeout(f'{question} {to_str} [{yes}/{no}/{always}]: ', timeout=timeout)).lower().strip()
+                reply = str(_input_with_timeout(quest_str, timeout=timeout)).lower().strip()
         except TimeoutError:
             log.warning(f'timeout expired, returning default={default} answer')
             reply=''
@@ -297,6 +341,6 @@ def _yes_or_no_or_always(question, default='y', timeout=None):
             return yes.lower()
         elif reply[0].lower() == 'n':
             return no.lower()
-        elif reply[0].lower()=='a':
+        elif always_option and reply[0].lower()=='a':
             return always.lower()
 

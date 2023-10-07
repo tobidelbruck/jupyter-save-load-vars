@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jupyter-save-load-vars"
-version = "0.1.1"
+version = "0.2.1"
 authors = [
   { name="Tobi Delbruck", email="tobidelbruck@gmail.com" },
 ]
@@ -26,3 +26,4 @@ dev = ["flake8", "pytest"]
 [project.urls]
 "Homepage" = "https://github.com/tobidelbruck/saveloadvars"
 "Bug Tracker" = "https://github.com/tobidelbruck/saveloadvars/issues"
+"Change Log" = "https://github.com/tobidelbruck/saveloadvar/CHANGELOG.md"
