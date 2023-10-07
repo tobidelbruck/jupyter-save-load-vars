@@ -1,8 +1,11 @@
-## 0.1.0
-Initial release
+# jupyter-save-load-vars change log
 
-## 0.2.0
+## 0.2.1
 ### New features
 * Added _vars_ argument to savevars
 ### Bug fixes
-* Fixed savevars bug that saved In and Out variables
+* Fixed _savevars_ bug that saved _In_ and _Out_ variables
+* Fixed yes/no/always questions to be yes/no when always not appropriate
+
+## 0.1.0
+Initial release
