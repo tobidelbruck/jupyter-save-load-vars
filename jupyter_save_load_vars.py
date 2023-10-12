@@ -194,15 +194,18 @@ def loadvars(filename, overwrite='prompt', warn=True):
 
     :raises: Exception if it cannot load for any reason except not being able to overwrite particular variables.
     """
-    if not ( overwrite=='yes' or overwrite=='no' or overwrite=='prompt' ):
-        raise ValueError(f'overwrite={overwrite} is invalid, must be "yes" "no" or "prompt"')
+    assert ( overwrite=='yes' or overwrite=='no' or overwrite=='prompt' ),\
+        f'overwrite={overwrite} is invalid, must be "yes" "no" or "prompt"'
     import dill
     from pathlib import Path
     dill_file_path=Path(filename)
     if dill_file_path.suffix=='': # if suffix is missing add .dill
         dill_file_path = dill_file_path.parent / (dill_file_path.name + _DILL)
-    if not dill_file_path.exists:
-        raise FileNotFoundError(f'{dill_file_path} does not exist')
+    assert FileNotFoundError, f'Path {dill_file_path} does not exist'
+    from os import access, R_OK
+    from os.path import isfile
+    assert isfile(dill_file_path) and access(dill_file_path, R_OK), \
+        f"File {dill_file_path} doesn't exist or isn't readable"
     if warn:
         try:
             import tempfile, os, pathlib, time
