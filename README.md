@@ -1,30 +1,39 @@
 # jupyter-save-load-vars
 Saves and loads variables, typically to and from an [IPython/Jupyter](https://stackoverflow.com/questions/51700425/what-is-the-relation-and-difference-between-ipython-and-jupyter-console) interactive notebook or other interactive workspace.
 
-[dill](https://pypi.org/project/dill/) is often used for [saving and loading from python notebooks](https://stackoverflow.com/questions/34342155/how-to-pickle-or-store-jupyter-ipython-notebook-session-for-later) but it fails for objects that cannot be pickled, e.g. hardware objects or generators. It also requires users to wrap the `dill.dump()` in a with open(file): call and does not handle restoring the variables to the workspace from the returned data from `dill.load()`. _** jupyter-save-load-vars**_ is an attempt to make this process as simple as possible.
+[dill](https://pypi.org/project/dill/) is often used for [saving and loading from python notebooks](https://stackoverflow.com/questions/34342155/how-to-pickle-or-store-jupyter-ipython-notebook-session-for-later) but it fails for objects that cannot be pickled, e.g. hardware objects or generators. It also requires users to wrap the `dill.dump()` in a with open(file): call and does not handle restoring the variables to the workspace from the returned data from `dill.load()`. _ **jupyter-save-load-vars**_ is an attempt to make this process as simple as possible.
 
-**jupyter-save-load-vars** supplies two functions, via `from jupyter_save_load_vars import savevars, loadvars`
-
-* `savevars(filename, vars=None, overwrite='prompt')` finds all local variables, excludes In and Out and any variable that starts with '_' and just skips objects that cannot be picked. 
-  * _vars_ is an optional list of strings, e.g. ['a','b'] that are saved. By default all variables are saved.
-  * _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing data file.
-
-* `loadvars(filename, overwrite='prompt', warn=True)` loads the variables back into the workspace. 
-  * _overwrite_ can be 'prompt' (the default), 'yes' (to silently overwrite), or 'no' to not overwrite existing variables.
-  * _warn=True_ warns about dangers of loading data from pickles once a day; set _warn=False_ to suppress this warning.
-
-The file name has _.dill_ appended if no suffix is provided.
-
-_jupyter-save-load-vars_ is available from [pypi](https://pypi.org/) and can be installed with
+## Usage
+_jupyter-save-load-vars_ is available from [pypi](https://pypi.org/) and can be installed from a terminal with
 ```bash
 pip install jupyter-save-load-vars
 ```
-(Note the use of - for install and _ for import)
+The pypi version may not be the lastest version.
+
+In your code:
+```python
+from jupyter_save_load_vars import savevars, loadvars # Note the use of _ for import
+savevars() # saves all local variables to a default filename in local folder
+loadvars() # loads them back into workspace
+```
+**jupyter-save-load-vars** supplies two functions
+
+* `savevars(filename=_DEFAULT_FILENAME, vars=None, overwrite='prompt')` finds all local variables, excludes In and Out and any variable that starts with '_' and just skips objects that cannot be picked. 
+  * By default all variables are saved. `vars` specifies which variables are saved. `vars` is either:
+    1. an optional list of strings, e.g. `vars=['a','b'] `that are saved. 
+    2. a single unix-type wildcard string, e.g. `vars='a*'` saves all variables starting with the letter a.
+  * `overwrite` can be 'prompt' (the default), 'yes' or `True` (to silently overwrite), or 'no' or `False` to not overwrite existing data file.
+
+* `loadvars(filename=_DEFAULT_FILENAME, overwrite='prompt', warn=True)` loads the variables back into the workspace. 
+  * `overwrite` can be 'prompt' (the default), 'yes' or `True` (to silently overwrite), or 'no' or `False` to not overwrite existing variables.
+  * `warn=True` warns about dangers of loading data from pickles once a day; set _warn=False_ to suppress this warning.
+
+The filename has _.dill_ appended if no suffix is provided.
 
 ### Warning
-Liike any unpickling operation, users should not `loadvars` from any file whose provenance is unknown.
+Liike any unpickling operation, users should not `loadvars` from any file whose provenance is unknown. Users are warned once every 24h about this danger.
 
-## Usage:
+## Examples:
 
 ```python
 from jupyter_save_load_vars import savevars,loadvars,printvars
